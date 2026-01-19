@@ -53,8 +53,6 @@ Learnings:
 - counting dict or smth
 """
 
-import copy
-
 
 def parse_input():
     """Parses the user input."""
@@ -107,34 +105,36 @@ def find_solution(grid: list[list[int]], elements: dict[int, int]) -> int:
     A and B
     """
 
-    return dfs(grid, 1, 2 ** elements[2], [], (0, 0))
+    return dfs(grid, 1, 2 ** elements[2], set(), (0, 0))
 
 
 def dfs(
     grid: list[list[int]],
     a_prosperity: int,
     b_prosperity: int,
-    A: list[tuple[int, int]],
+    A: set[tuple[int, int]],
     curr: tuple[int, int],
 ) -> int:
     curr_el = grid[curr[0]][curr[1]]
     a_prosperity *= curr_el
     b_prosperity /= grid[curr[0]][curr[1]]
-    A.append(curr)
+    A.add(curr)
 
     connected = calc_connected(grid, A, curr)
     best_score = abs(b_prosperity - a_prosperity)
     for connection in connected:
+        A.add(connection)
         best_score = min(
             best_score,
-            dfs(grid, a_prosperity, b_prosperity, copy.deepcopy(A), connection),
+            dfs(grid, a_prosperity, b_prosperity, A, connection),
         )
+        A.add(connection)
 
     return best_score
 
 
 def calc_connected(
-    grid: list[list[int]], A: list[tuple[int, int]], curr: tuple[int, int]
+    grid: list[list[int]], A: set[tuple[int, int]], curr: tuple[int, int]
 ) -> list[tuple[int, int]]:
     """Calc connected nodes."""
 
