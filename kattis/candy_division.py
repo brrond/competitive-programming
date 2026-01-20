@@ -1,0 +1,46 @@
+"""
+Link: https://open.kattis.com/problems/candydivision
+
+Candy Division
+
+Benny has just found out that he has N candies in his pocket.
+He is always happy to share candies with his friends,
+because then he doesn’t have to eat them alone and get fat.
+There is one problem, though. He cannot invite any number of friends,
+since it would be impossible to divide candies evenly among people.
+
+Given N, how many people can Benny invite to eat candies,
+so that everybody gets the same number of candies and all candies will be eaten?
+
+Input
+
+The input contains one line with one integer N (2 <= N <= 10^12),
+denoting the number of candies in Benny’s pocket.
+
+Output
+
+Output one line with all possible number of friends Benny can invite.
+Output them in ascending order and separate by spaces.
+
+Sample Input 1 	Sample Output 1
+
+30
+
+0 1 2 4 5 9 14 29
+"""
+
+n = int(input())
+# n = int("30")
+
+res = [1]
+i = 2
+
+while i < n:
+    if n % i == 0:
+        res.append(i)
+    i += 1
+res.append(n)
+
+friends = [value - 1 for value in res]
+
+print(" ".join(map(str, friends)))
