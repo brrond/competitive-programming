@@ -1,35 +1,18 @@
-"""
-String Matching
+# Knuth-Morris-Pratt (KMP)
 
-Input
-The input consists of several test cases. Each test case consists of two lines,
-first a non-empty pattern, then a non-empty text. Input is terminated by end-of-file.
-The input file will not be larger than 5 Mb.
+Algorithm for pattern finding in string.
+Complexity: O(n)
 
-Output
-For each test case, output one line containing the positions of all the occurences
-of pattern in text, from first to last, separated by a single space.
-Sample Input 1 	Sample Output 1
+Consist of two parts:
+1. Creation of Longest Prefix Suffix (LPS)
+2. Usage of LPS to find the pattern
 
-p
-Popup
-helo
-Hello there!
-peek a boo
-you speek a bootiful language
-anas
-bananananaspaj
+## LPS
 
+First step is to find LPS. The idea of this array is that there can probably be multiple prefixes in pattern and we have to find all of them to be able to "move" the pattern minimum amount of cells to continue the search efficiently.
 
-2 4
-
-5
-7
-"""
-
-import sys
-
-
+Minimal example:
+```python
 def get_lps(p: str) -> list[int]:
     """
     Calculates the longest prefix suffix of pattern p.
@@ -62,8 +45,18 @@ def get_lps(p: str) -> list[int]:
                 j = lps[j - 1]
 
     return lps
+```
 
+## KMP
 
+The idea now is to apply lps to the string similarly as "prefix". 
+- If char matches -> continue
+- If reached the end of the pattern -> found match + start from the most largest previous prefix
+- If not match:
+  - If not in "prefix" (j == 0) -> continue
+  - If is in "prefix" (j != 0) -> got to the previous longest prefix
+
+```python
 def kmp(s: str, p: str) -> list[int]:
     """
     Return the positions of all occurrences
@@ -95,7 +88,8 @@ def kmp(s: str, p: str) -> list[int]:
     return positions
 
 
-for line in sys.stdin:
-    p = line.rstrip("\n")
-    s = sys.stdin.readline().rstrip("\n")
-    print(" ".join(map(str, kmp(s, p))))
+```
+
+## Problems
+
+kattis/String Matching
