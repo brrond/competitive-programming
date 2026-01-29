@@ -35,24 +35,22 @@ class CPSolver:
             n = int(self.get_string())
             permutation = list(map(int, self.get_string().split()))
 
-            max_index = None
-            for i in range(0, len(permutation) - 1):
-                for j in range(i + 1, len(permutation)):
+            possible_max = n
+            left = None
+            right = None
+            for i, el in enumerate(permutation):
+                if left is None:
+                    if el != n:
+                        left = i
+                    else:
+                        n -= 1
+                else:
+                    if el == n:
+                        right = i
+                        break
 
-                    if permutation[j] > permutation[i]:
-
-                        if max_index is None:
-                            max_index = j
-                        elif permutation[j] > permutation[max_index]:
-                            max_index = j
-
-                if max_index is not None:
-                    break
-
-            if max_index is not None:
-                permutation[i : max_index + 1] = reversed(
-                    permutation[i : max_index + 1]
-                )
+            if left is not None:
+                permutation[left : right + 1] = reversed(permutation[left : right + 1])
 
             print(" ".join(map(str, permutation)))
 
