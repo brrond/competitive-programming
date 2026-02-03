@@ -3,6 +3,8 @@ My Python template for competitive programming.
 Includes some basic wrapper logic easy debugging.
 """
 
+import sys
+
 
 class CPSolver:
     """Class to handle input for debugging."""
@@ -25,7 +27,12 @@ class CPSolver:
 
         if self.debug and self.file is not None:
             return self.file.readline()
-        return input()
+        return sys.stdin.readline()
+
+    def get_ints(self) -> list[int]:
+        """Returns integers from the input."""
+
+        return list(map(int, self.get_string().split()))
 
     def solve(self):
         """Solution goes here."""
