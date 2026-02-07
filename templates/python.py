@@ -34,6 +34,11 @@ class CPSolver:
 
         return list(map(int, self.get_string().split()))
 
+    def get_int(self) -> int:
+        """Returns an integer from the input."""
+
+        return int(self.get_string())
+
     def solve(self):
         """Solution goes here."""
 
