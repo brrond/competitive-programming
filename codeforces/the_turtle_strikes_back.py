@@ -49,64 +49,76 @@ class CPSolver:
 
             n, m = self.get_ints()
             matrix = [self.get_ints() for _ in range(n)]
+            cache = dict()
 
-            best = find_best_variant(matrix, n, m)
+            def calc_best_path(i: int, j: int) -> tuple[list[tuple[int, int]], int]:
+
+                if i + 1 == n and j + 1 == m:
+                    return [(i, j)], matrix[i][j]
+
+                key = (i, j)
+                if key in cache:
+                    return cache[key]
+
+                alt1 = alt2 = None
+                if i + 1 < n:
+                    alt1 = calc_best_path(i + 1, j)
+                if j + 1 < m:
+                    alt2 = calc_best_path(i, j + 1)
+
+                if alt1 is None and alt2 is not None:
+                    path, t = alt2
+                    path.append(key)
+                    t += matrix[i][j]
+                    alt2 = (path, t)
+                    cache[key] = alt2
+                    return alt2
+
+                if alt1 is not None and alt2 is None:
+                    path, t = alt1
+                    path.append(key)
+                    t += matrix[i][j]
+                    alt1 = (path, t)
+                    cache[key] = alt1
+                    return alt1
+
+                if alt1 is not None and alt2 is not None:
+                    if alt1[1] > alt2[1]:
+                        path, t = alt1
+                        path.append(key)
+                        t += matrix[i][j]
+                        alt1 = (path, t)
+                        cache[key] = alt1
+                        return alt1
+                    path, t = alt2
+                    path.append(key)
+                    t += matrix[i][j]
+                    alt2 = (path, t)
+                    cache[key] = alt2
+                    return alt2
+
+                raise RuntimeError()
+
+            path, _ = calc_best_path(0, 0)
 
             max_pleasure_i = 0
-            for i, el in enumerate(best.pleasures):
-                if el > best.pleasures[max_pleasure_i]:
+            for i, pos in enumerate(path):
+                el = matrix[pos[0]][pos[1]]
+                if el > matrix[path[max_pleasure_i][0]][path[max_pleasure_i][1]]:
                     max_pleasure_i = i
 
-            pos = best.path[max_pleasure_i]
+            pos = path[max_pleasure_i]
             matrix[pos[0]][pos[1]] *= -1
+            cache.clear()
 
-            print(find_best_variant(matrix, n, m).total)
-
-
-class Variant:
-    def __init__(self, path: list[tuple[int, int]], pleasures: list[int], total: int):
-        self.pleasures = pleasures
-        self.path = path
-        self.total = total
-
-    def __repr__(self) -> str:
-        return f"{self.path} {self.pleasures} ({self.total})"
-
-    def __lt__(self, other):
-        return self.total > other.total
-
-
-def find_best_variant(matrix: list[list[int]], n: int, m: int) -> Variant:
-    full_paths: list[Variant] = []
-    variants = [Variant([(0, 0)], [matrix[0][0]], matrix[0][0])]
-    while len(variants) != 0:
-
-        variant = variants.pop(0)
-        i, j = variant.path[-1]
-        if i == n - 1 and j == m - 1:
-            heapq.heappush(full_paths, variant)
-            continue
-
-        if i < n - 1:
-            clone = copy.deepcopy(variant)
-            clone.path.append((i + 1, j))
-            clone.pleasures.append(matrix[i + 1][j])
-            clone.total += matrix[i + 1][j]
-            variants.append(clone)
-
-        if j < m - 1:
-            clone = copy.deepcopy(variant)
-            clone.path.append((i, j + 1))
-            clone.pleasures.append(matrix[i][j + 1])
-            clone.total += matrix[i][j + 1]
-            variants.append(clone)
-    return full_paths[0]
+            _, total = calc_best_path(0, 0)
+            print(total)
 
 
 def main():
     """Main method."""
 
-    CPSolver(True)()
+    CPSolver()()
 
 
 if __name__ == "__main__":
