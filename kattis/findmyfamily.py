@@ -3,8 +3,9 @@ Link: https://open.kattis.com/problems/findmyfamily
 """
 
 import sys
+import bisect
 
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     f = open("../input.txt", "r", encoding="utf-8")
@@ -27,49 +28,43 @@ for photo_index in range(k):
         print(h)
 
     # O(n)
-    heights_with_index = [(height, i) for i, height in enumerate(h)]
-
-    # O(n log n)
-    sorted_heights = sorted(
-        heights_with_index,
-        key=lambda height_with_index: height_with_index[0],
-    )
+    max_right = [0] * len(h)
+    max_right[-1] = h[-1]
+    for i in range(len(h) - 2, -1, -1):
+        max_right[i] = max(max_right[i + 1], h[i])
 
     if DEBUG:
-        print(sorted_heights)
+        print(max_right)
+
+    # O(n log n)
+    second_min_left = [-1] * len(h)
+    sorted_heights = [h[0]]
+    # -1 means there are no second min until current point
+    for iterable_i, height in enumerate(h[1:]):  # O(n)
+        i = iterable_i + 1
+
+        # O(log n)
+        insert_index = bisect.bisect_right(sorted_heights, height)
+        if insert_index == len(sorted_heights):
+            sorted_heights.append(height)
+            continue
+
+        # O(log n)
+        # Worst case: O(n)
+        second_min_left[i] = sorted_heights[insert_index]
+        bisect.insort_left(sorted_heights, height)
+
+    if DEBUG:
+        print(second_min_left)
 
     # O(n)
-    for i, (my_height, my_index) in enumerate(sorted_heights):
+    for i, height in enumerate(h):
 
-        alice_height = None
-        # O(n)
-        for sorted_alice_index, (
-            possible_alice_height,
-            possible_alice_index,
-        ) in enumerate(sorted_heights[i + 1 :]):
-
-            if possible_alice_height > my_height and possible_alice_index < my_index:
-                alice_height = possible_alice_height
-                break
-
-        bob_height = None
-        if alice_height is not None:
-
-            # O(n)
-            for possible_bob_height, possible_bob_index in sorted_heights[
-                sorted_alice_index + 1 :
-            ]:
-
-                if possible_bob_height > alice_height and possible_bob_index > my_index:
-                    bob_height = possible_bob_height
-                    break
-
-        if bob_height is not None:
+        second_min = second_min_left[i]
+        if max_right[i] > second_min > height:
             res.append(photo_index + 1)
             break
 
 
 print(len(res))
 print(*res, sep="\n")
-
-# O(n^2)
