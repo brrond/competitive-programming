@@ -3,9 +3,8 @@ Link: https://open.kattis.com/problems/findmyfamily
 """
 
 import sys
-import bisect
 
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     f = open("../input.txt", "r", encoding="utf-8")
@@ -28,43 +27,31 @@ for photo_index in range(k):
         print(h)
 
     # O(n)
-    max_right = [0] * len(h)
+    max_right = [0] * n
     max_right[-1] = h[-1]
-    for i in range(len(h) - 2, -1, -1):
+    for i in range(n - 2, -1, -1):
         max_right[i] = max(max_right[i + 1], h[i])
 
     if DEBUG:
         print(max_right)
 
-    # O(n log n)
-    second_min_left = [-1] * len(h)
-    sorted_heights = [h[0]]
-    # -1 means there are no second min until current point
-    for iterable_i, height in enumerate(h[1:]):  # O(n)
-        i = iterable_i + 1
+    stack = []  # Potential Alice's height
+    stack.append(h[0])
+    i = 1
+    while i < n:  # O(n)
 
-        # O(log n)
-        insert_index = bisect.bisect_right(sorted_heights, height)
-        if insert_index == len(sorted_heights):
-            sorted_heights.append(height)
-            continue
+        height = h[i]
+        if height < stack[-1]:
+            while len(stack) != 0 and stack[-1] > height:  # O(n) BUT
+                # in reality O(k) where k is number of i's where h[i] > h[i - 1]
+                last_poped = stack.pop(-1)
 
-        # O(log n)
-        # Worst case: O(n)
-        second_min_left[i] = sorted_heights[insert_index]
-        bisect.insort_left(sorted_heights, height)
+            if max_right[i] > last_poped > height:
+                res.append(photo_index + 1)
+                break
 
-    if DEBUG:
-        print(second_min_left)
-
-    # O(n)
-    for i, height in enumerate(h):
-
-        second_min = second_min_left[i]
-        if max_right[i] > second_min > height:
-            res.append(photo_index + 1)
-            break
-
+        stack.append(h[i])
+        i += 1
 
 print(len(res))
 print(*res, sep="\n")
