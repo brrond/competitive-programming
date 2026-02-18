@@ -1,8 +1,10 @@
 """
-Link:
+Link: https://open.kattis.com/problems/arraysmoothening
 """
 
 import sys
+from collections import defaultdict
+import heapq
 
 
 class CPSolver:
@@ -54,14 +56,44 @@ class CPSolver:
         else:
             sys.stdout.write(string + "\n")
 
-    def solve(self):
+    def solve(self) -> None:
         """Solution goes here."""
+
+        n, k = self.get_ints()
+        arr = self.get_ints()
+        # frequencies
+        frequencies: dict[int, int] = defaultdict(lambda: 0)
+
+        # O(n)
+        for el in arr:
+            frequencies[el] += 1
+
+        # Edge case 1: there are no elements to remove
+        if k == 0:
+            self.put_string(str(max(frequencies.values())))
+            return
+
+        counts = [CustomInteger(i) for i in list(frequencies.values())]
+        heapq.heapify(counts)
+
+        while k != 0:
+            heapq.heappush(counts, CustomInteger(heapq.heappop(counts).i - 1))
+            k -= 1
+        self.put_string(str(counts[0].i))
+
+
+class CustomInteger:
+    def __init__(self, i: int):
+        self.i = i
+
+    def __lt__(self, other):
+        return self.i > other.i
 
 
 def main():
     """Main method."""
 
-    CPSolver()()
+    CPSolver(True)()
 
 
 if __name__ == "__main__":
