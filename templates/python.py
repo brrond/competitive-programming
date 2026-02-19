@@ -54,7 +54,7 @@ class CPSolver:
         else:
             sys.stdout.write(string + "\n")
 
-    def solve(self):
+    def solve(self) -> None:
         """Solution goes here."""
 
 
