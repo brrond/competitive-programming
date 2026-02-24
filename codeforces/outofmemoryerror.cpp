@@ -49,13 +49,22 @@ class CPSolver {
                 }
             }
 
+            // Represents the index when the last reset operation for the
+            // element was performed
+            vector<int> last_resets(n, 0);
+            int last_reset = 0;
+
             // Apply the rest of the iterations
             // O(m)
             for (auto it = operations.begin(); it < operations.end(); it++) {
+                // Must be reset
+                if (last_resets[it->first] < last_reset) {
+                    last_resets[it->first] = last_reset;
+                    arr[it->first] = arr_original[it->first];
+                }
+
                 if (arr[it->first] + it->second > h) {
-                    // Reset
-                    // O(?)
-                    memcpy(arr, arr_original, 4 * n);
+                    last_reset = (it - operations.begin());
                 } else {
                     arr[it->first] += it->second;
                 }
@@ -63,6 +72,11 @@ class CPSolver {
 
             // Print output
             for (int i = 0; i < n; i++) {
+                // Must be reset
+                if (last_resets[i] < last_reset) {
+                    arr[i] = arr_original[i];
+                }
+
                 cout << arr[i];
                 if (i != n - 1) {
                     cout << " ";
