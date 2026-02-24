@@ -54,6 +54,11 @@ class CPSolver:
         else:
             sys.stdout.write(string + "\n")
 
+    def put_int(self, integer: int) -> None:
+        """Prints the int into the output."""
+
+        self.put_string(str(integer))
+
     def solve(self) -> None:
         """Solution goes here."""
 
