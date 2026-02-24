@@ -1,20 +1,24 @@
 #include <algorithm>
-#include <iostream>
 #include <fstream>
+#include <functional>
+#include <iostream>
+#include <queue>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace std;
 
-enum Result {
-    FINE = 1,
-    WEEKEND_WORK = 2,
-    SERIOUS_TROUBLE = 3
+struct Piano {
+    int first_day;
+    int last_day;
+
+    Piano() : Piano(0, 0) {}
+    Piano(int f, int l) : first_day(f), last_day(l) {}
+    int get_span() { return last_day - first_day; }
 };
 
 class CPSolver {
-public:
+  public:
     CPSolver(bool debug);
     ~CPSolver();
     string get_string();
@@ -22,133 +26,130 @@ public:
     vector<int> get_ints(int n);
     void operator()();
 
-    Result calc(int curr_piano_index) {
-        if (curr_piano_index >= this->_start_end_days->size()) {
-            return FINE;
-        }
-
-        auto &start_end_days = *this->_start_end_days;
-        auto &capacity = *this->_capacity;
-
-        Result final_result = SERIOUS_TROUBLE;
-        // T(100)
-        for (int today = start_end_days[curr_piano_index].first; today <= start_end_days[curr_piano_index].second; today++) {
-
-            // try to move piano on "today"
-            // if capacity allows
-            if (capacity[today] > 0) {
-
-                // Update state
-                // O(1)
-                capacity[today]--;
-
-                // O(m)
-                auto res = calc(curr_piano_index + 1);
-
-                // Restore state
-                // O(1)
-                capacity[today]++;
-
-                final_result = min(res, final_result);
-                if ((today % 7 == 0 || today % 7 == 6) && final_result == FINE) {
-                    final_result = WEEKEND_WORK;
-                }
-                if (final_result == FINE) break;
-            }
-        }
-
-        return final_result;
-
-        // Total complexity:
-        // O(100 * m)
-    }
-
     void solve() {
         int n = get_int();
         // O(n)
-        while(n--) {
+        while (n--) {
 
             int m = get_int();
             int p = get_int();
-
             int possible_moves_a_day = p / 2;
-            // possible worked capacity (101 because I'm lazy to do -1)
-            vector<int> capacity(101, possible_moves_a_day);
-            this->_capacity = &capacity;
-
-            vector<pair<int, int>> start_end_days(m, make_pair(0, 0));
-            this->_start_end_days = &start_end_days;
-
-            // read input
-            // O(m)
-            generate(start_end_days.begin(), start_end_days.end(), [this, &capacity]() {
-                int b = this->get_int();
-                int e = this->get_int();
-                return make_pair(b, e);
-            });
-
             if (debug) {
-                for_each(start_end_days.begin(), start_end_days.end(), [](pair<int, int> se) { 
-                    cout << se.first << " " << se.second << endl;
-                });
+                cout << "Number of available moves per day: "
+                     << possible_moves_a_day << endl;
             }
-
-            // Case 1: if there are pianos with end_day == start_day
-            // they can only be moved on that day.
-            // In this case, if there are more piano to be moved -> impossible.
-            bool possible = true;
-            // O(m)
-            start_end_days.erase(
-                remove_if(start_end_days.begin(), start_end_days.end(), [&capacity, &possible](pair<int, int> se_day){
-                    if ((se_day.second - se_day.first) == 0) {
-                        // O(1)
-                        capacity[se_day.first]--;
-
-                        // O(1)
-                        if (capacity[se_day.first] < 0) {
-                            possible = false;
-                        }
-
-                        return true;
-                    }
-                    return false;
-                }), 
-                start_end_days.end()
-            );
-            if (!possible) {
-                cout << "serious trouble" << endl;
+            if (m == p && m == 0) {
+                cout << "fine" << endl;
                 continue;
             }
 
-            // Case 2: all others.
-            // I assume it's DP.
-            // mem[curr_piano_index] = {"ww", "f", "st"}
-            // 100 * m
-            auto res = calc(0);
-            switch (res) {
-                case FINE: cout << "fine" << endl; break;
-                case WEEKEND_WORK: cout << "weekend work" << endl; break;
-                case SERIOUS_TROUBLE: cout << "serious trouble" << endl; break;
+            vector<Piano> pianos(m, Piano());
+
+            // read input
+            // O(m)
+            generate(pianos.begin(), pianos.end(), [this]() {
+                int f = this->get_int();
+                int l = this->get_int();
+                return Piano(f, l);
+            });
+
+            // O(m log m)
+            sort(pianos.begin(), pianos.end(),
+                 [](Piano &piano1, Piano &piano2) {
+                     return piano1.first_day < piano2.first_day;
+                 });
+
+            if (debug) {
+                cout << "Print all sorted piano deliveries:" << endl;
+                for_each(pianos.begin(), pianos.end(), [](Piano pm) {
+                    cout << pm.first_day << " " << pm.last_day << endl;
+                });
+            }
+
+            // Try to make all moves NOT on weekends
+            priority_queue<int, vector<int>, greater<int>> latest_delivery_day;
+            int piano_i = 0;
+            bool possible = possible_moves_a_day > 0;
+            for (int today = 0; today <= 100 && possible; today++) {
+
+                // Skip weekends for now
+                if ((today % 7) == 0) {
+                    continue;
+                } else if ((today % 7) == 6) {
+                    continue;
+                }
+
+                // Take all pianos of this day
+                while (piano_i < pianos.size() &&
+                       pianos[piano_i].first_day <= today) {
+                    latest_delivery_day.push(pianos[piano_i++].last_day);
+                }
+
+                // Until capacity allows
+                int capacity = possible_moves_a_day;
+                while (capacity != 0 && !latest_delivery_day.empty()) {
+
+                    // take piano that can't wait
+                    int latest_day = latest_delivery_day.top();
+                    latest_delivery_day.pop();
+                    if (latest_day < today) {
+                        possible = false;
+                        break;
+                    }
+                    capacity--;
+                }
+            }
+
+            if (possible && latest_delivery_day.empty() && piano_i == m) {
+                cout << "fine" << endl;
+                continue;
+            }
+
+            // Try to make all moves
+            priority_queue<int, vector<int>, greater<int>>
+                latest_delivery_day_2;
+            piano_i = 0;
+            possible = possible_moves_a_day > 0;
+            for (int today = 0; today <= 100 && possible; today++) {
+
+                // Take all pianos of this day
+                while (piano_i < pianos.size() &&
+                       pianos[piano_i].first_day <= today) {
+                    latest_delivery_day_2.push(pianos[piano_i++].last_day);
+                }
+
+                // Until capacity allows
+                int capacity = possible_moves_a_day;
+                while (capacity != 0 && !latest_delivery_day_2.empty()) {
+
+                    // take piano that can't wait
+                    int latest_day = latest_delivery_day_2.top();
+                    latest_delivery_day_2.pop();
+                    if (latest_day < today) {
+                        possible = false;
+                        break;
+                    }
+                    capacity--;
+                }
+            }
+
+            if (possible && latest_delivery_day_2.empty() && piano_i == m) {
+                cout << "weekend work" << endl;
+            } else {
+                cout << "serious trouble" << endl;
             }
         }
-
-        // Total complexity:
-        // O(n * (2m + 100m)) = O(nm)
     }
 
-private:
-    vector<int>* _capacity = NULL;
-    vector<pair<int, int>>* _start_end_days = NULL;
-
-
-private:
+  private:
+  private:
     bool debug;
-    istream* inp;
-    ifstream* finp;
+    istream *inp;
+    ifstream *finp;
 };
 
 int main() {
-    CPSolver solver(false);
+    CPSolver solver(true);
     solver();
     return 0;
 }
@@ -170,9 +171,7 @@ CPSolver::~CPSolver() {
     }
 }
 
-void CPSolver::operator()() {
-    solve();
-}
+void CPSolver::operator()() { solve(); }
 
 string CPSolver::get_string() {
     string str;
@@ -187,7 +186,8 @@ int CPSolver::get_int() {
 }
 
 vector<int> CPSolver::get_ints(int n) {
-    if (n <= 0) return {};
+    if (n <= 0)
+        return {};
     vector<int> ret;
     while (n--) {
         ret.push_back(get_int());
