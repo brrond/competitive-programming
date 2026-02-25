@@ -22,7 +22,7 @@ Should output:
 """
 
 import sys
-import heapq
+from functools import cache
 from math import sqrt
 
 SPEED = 5.0
@@ -92,15 +92,17 @@ class CPSolver:
 
         self.put_string(str(round(f, precision)))
 
-    def calc_travel_time(self, a: tuple[float, float], b: tuple[float, float]) -> float:
+    @cache
+    @staticmethod
+    def calc_travel_time(a: tuple[float, float], b: tuple[float, float]) -> float:
         x1, y1 = a
         x2, y2 = b
         d = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         return d / SPEED
 
-    def calc_flight_time(
-        self, cannon: tuple[float, float], b: tuple[float, float]
-    ) -> float:
+    @cache
+    @staticmethod
+    def calc_flight_time(cannon: tuple[float, float], b: tuple[float, float]) -> float:
         x1, y1 = cannon
         x2, y2 = b
         d = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -122,36 +124,29 @@ class CPSolver:
 
         d = [float("inf") for _ in range(n + 2)]
         d[0] = 0
-        d[-1] = self.calc_travel_time(start, finish)
+        d[-1] = CPSolver.calc_travel_time(start, finish)
 
-        # Dijkstra
-        pq: list[tuple[float, int]] = []
-        for i in range(n + 2):
-            if i == 0:
-                continue
-            cost = self.calc_travel_time(cannons[0], cannons[i])
-            heapq.heappush(pq, (cost, i))
+        # Bellman-Ford
+        # Total number of vertices here is n + 2
+        # BF works with V - 1
+        for _ in range(n + 1):
 
-        while len(pq) != 0:
+            # relax all edges
+            for i in range(n + 2):
+                for j in range(n + 2):
 
-            value, i = heapq.heappop(pq)
-            if value > d[i]:
-                continue
+                    if i == j:
+                        continue
 
-            for j in range(1, n + 2):
+                    alternative1 = CPSolver.calc_travel_time(cannons[i], cannons[j])
+                    alternative2 = (
+                        CPSolver.calc_flight_time(cannons[i], cannons[j])
+                        if i != 0
+                        else float("inf")
+                    )
 
-                # Skip self
-                if j == i:
-                    continue
-
-                alternative1 = self.calc_travel_time(cannons[i], cannons[j])
-                alternative2 = self.calc_flight_time(cannons[i], cannons[j])
-                cost = min(alternative1, alternative2)
-
-                alternative = value + cost
-                if alternative < d[j]:
-                    d[j] = alternative
-                    heapq.heappush(pq, (alternative, j))
+                    cost = min(alternative1, alternative2)
+                    d[j] = min(d[j], d[i] + cost)
 
         self.put_float(d[-1], 10)
 
