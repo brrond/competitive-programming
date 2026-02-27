@@ -3,6 +3,7 @@ Link:
 """
 
 import sys
+from typing import Callable, Any
 
 
 class CPSolver:
@@ -32,18 +33,36 @@ class CPSolver:
         """Get the string either from input file or from user input."""
 
         if self.debug and self.input_file is not None:
-            return self.input_file.readline()
-        return sys.stdin.readline()
+            line = self.input_file.readline()
+        else:
+            line = sys.stdin.readline()
+        return line.strip()
+
+    def _get_item(self, map_function: Callable[[str], Any]) -> Any:
+        return map_function(self.get_string())
+
+    def _get_items(self, map_function: Callable[[str], Any]) -> list[Any]:
+        return list(map(map_function, self.get_string().split()))
 
     def get_ints(self) -> list[int]:
         """Returns integers from the input."""
 
-        return list(map(int, self.get_string().split()))
+        return self._get_items(int)
 
     def get_int(self) -> int:
         """Returns an integer from the input."""
 
-        return int(self.get_string())
+        return self._get_item(int)
+
+    def get_floats(self) -> list[float]:
+        """Returns floats from the input."""
+
+        return self._get_items(float)
+
+    def get_float(self) -> float:
+        """Returns a float from the input."""
+
+        return self._get_item(float)
 
     def put_string(self, string: str) -> None:
         """Prints the string into the output."""
@@ -58,6 +77,21 @@ class CPSolver:
         """Prints the int into the output."""
 
         self.put_string(str(integer))
+
+    def put_ints(self, integers: list[int]) -> None:
+        """Prints ints into the output."""
+
+        self.put_string(" ".join(map(str, integers)))
+
+    def put_float(self, f: float, precision: int = 2) -> None:
+        """Prints the float into the output."""
+
+        self.put_string(str(round(f, precision)))
+
+    def put_floats(self, floats: list[float], precision: int = 2) -> None:
+        """Prints floats into the output."""
+
+        self.put_string(" ".join(map(str, [round(f, precision) for f in floats])))
 
     def solve(self) -> None:
         """Solution goes here."""
