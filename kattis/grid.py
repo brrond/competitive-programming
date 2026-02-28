@@ -5,6 +5,8 @@ Link:
 import sys
 from typing import Callable, Any
 
+from queue import deque
+
 
 class CPSolver:
     """Class to handle input for debugging."""
@@ -107,86 +109,64 @@ class CPSolver:
                 row.append(int(el))
             grid.append(row)
 
-        mem: dict[tuple[int, int], int] = {}
-        mem[(n - 1, m - 1)] = 0
+        # BFS
+        # For this implementation I use deque, because insertion and deletion O(1)
+        # For each path current node is saved as i, j, visited
+        # i, j is the position in the grid
+        # visited is a set of already visited positions (i, j)-pairs
+        # visited set is required because there can be loops
+        paths = deque()
+        paths.append((0, 0, set()))
 
-        # A set of indices that are currently being processed
-        processing: set[tuple[int, int]] = set()
+        curr_len = 0  # current max depth (answer)
+        found = False  # True, if node (n - 1, m - 1) (finish) was reached
+        while len(paths) != 0:
+            # queue for next possible paths
+            new_paths = deque()
 
-        def calc(i: int, j: int) -> int:
-            """
-            Returns the minimal number of step to go from (i, j)
-            to the end of the grid (n, m).
-            """
+            # iterate all reached nodes
+            while len(paths) != 0:
+                i, j, visited = paths.pop()
 
-            key = (i, j)
-            if key in mem.keys():
-                return mem[key]
+                # Finish was reached
+                if i == n - 1 and j == m - 1:
+                    found = True
+                    break
 
-            if key in processing:
-                return -2
+                # Skip loop
+                if (i, j) in visited:
+                    continue
+                k = grid[i][j]
+                visited.add((i, j))
 
-            best = None
-
-            # Calculate possible jump directions
-            k = grid[i][j]
-
-            # There are no moves to make
-            if k == 0:
-                mem[key] = -1
-                return -1
-
-            processing.add(key)
-
-            possible_directions = []
-            if j + k < m:
-                possible_directions.append("RIGHT")
-            if i + k < n:
-                possible_directions.append("DOWN")
-            if i - k >= 0:
-                possible_directions.append("UP")
-            if j - k >= 0:
-                possible_directions.append("LEFT")
-
-            # Try all possible jump directions
-            for direction in possible_directions:
-
-                new_i = i
-                new_j = j
-                if direction == "UP":
-                    new_i -= k
-                elif direction == "DOWN":
-                    new_i += k
-                elif direction == "LEFT":
-                    new_j -= k
-                else:
-                    new_j += k
-
-                alternative = calc(new_i, new_j)
-                if alternative == -2:
-                    # Current key is still being processed.
-                    # Skip
+                # There are no other nodes
+                if k == 0:
                     continue
 
-                if alternative == -1:
-                    # Current branch has no solutions
-                    # Skip
-                    continue
+                # Add all possible variants
+                if i - k >= 0:
+                    new_paths.append((i - k, j, visited))
+                if i + k < n:
+                    new_paths.append((i + k, j, visited))
+                if j - k >= 0:
+                    new_paths.append((i, j - k, visited))
+                if j + k < m:
+                    new_paths.append((i, j + k, visited))
 
-                if best is None:
-                    best = alternative
-                best = min(alternative, best)
+            if found:
+                break
 
-            processing.remove(key)
+            # New state
+            paths = new_paths
+            curr_len += 1
 
-            if best is None:
-                mem[key] = -1
-                return -1
-            # else:
-            mem[key] = best + 1
-            return best + 1
+        # If the finish was reached, curr_len is the answer
+        if found:
+            self.put_int(curr_len)
+        else:
+            self.put_int(-1)
 
-        self.put_int(calc(0, 0))
+        # Because loops are skipped, worst case is O(nm) if all the elements of the grid are 1
 
 
 def main():
