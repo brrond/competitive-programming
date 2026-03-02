@@ -24,6 +24,8 @@ Sample output:
 6
 2
 -1
+
+Solution adapted from: https://github.com/mpfeifer1/Kattis/blob/master/grass.cpp
 """
 
 import sys
@@ -132,69 +134,66 @@ class CPSolver:
         """Solution goes here."""
 
         lines = self.get_all_strings()
-        lines.pop(-1)
-        while len(lines) != 0:
-            n, l, w = list(map(int, lines.pop(0).split()))
+        i = 0
+        while i < len(lines):
+            n, l, w = list(map(int, lines[i].split()))
+            i += 1
 
             # A list of sprinklers:
             # each is represented by two integers:
-            # - the distance from left side to the left part of rectangle
-            # that is being watered
-            # - x position
-            # - radius
-            sprinklers: list[tuple[float, int, int]] = []
+            # - left fully watered part
+            # - right fully watered part
+            sprinklers: list[tuple[float, float]] = []
             for _ in range(n):
-                x, r = list(map(int, lines.pop(0).split()))
+                x, r = list(map(int, lines[i].split()))
+                i += 1
 
                 # Ignore sprinklers that can't even water one column
-                if r < w:
+                if r <= w / 2:
                     continue
 
-                h = math.sqrt(r**2 - (w / 2) ** 2)
-                sprinklers.append((x - h, x, r))
+                h = math.sqrt(r**2 - (w / 2.0) ** 2)
+                sprinklers.append((max(x - h, 0), min(x + h, l)))
 
-            # Sort all sprinklers along first argument
+            # Sort all sprinklers along the left fully watered part
             sprinklers = sorted(sprinklers, key=lambda sprinkler: sprinkler[0])
 
             if self.debug:
                 print(sprinklers)
 
-            strip_to_be_watered = 0.0
-            sprinkler_i = 1
-            sprinkler_to_use: Optional[tuple[float, int, int]] = sprinklers[0]
-            abort = False
-            answer = 0
-            while strip_to_be_watered < l:
+            actual = []
+            actual.append(sprinklers[0])
+            for sprinkler in sprinklers[1:]:
+                if sprinkler[1] > actual[-1][1]:
+                    actual.append(sprinkler)
+            sprinklers = actual
 
-                # Can try to find better sprinkler
-                if sprinkler_i < len(sprinklers):
-                    sprinkler = sprinklers[sprinkler_i]
+            target = 0.0
+            next = 0.0
+            answer = 1
+            works = True
+            j = 0
+            while j < len(sprinklers):
 
-                    # Find the best next sprinkler
-                    if sprinkler[0] <= strip_to_be_watered:
-                        sprinkler_to_use = sprinkler
-                        sprinkler_i += 1
-                        continue
+                if sprinklers[j][0] <= target:
+                    next = max(next, sprinklers[j][1])
+                    j += 1
+                    continue
 
-                if sprinkler_to_use is None:
-                    abort = True
-                    break
-
-                # The best sprinkler to use is found
-                a, x, r = sprinkler_to_use
-                if a > strip_to_be_watered:
-                    abort = True
+                if abs(target - next) < 0.00001:
+                    works = False
                     break
 
                 answer += 1
-                h = x - a
-                strip_to_be_watered = x + h
-                sprinkler_to_use = None
+                target = next
 
-            if abort:
-                self.put_int(-1)
-            else:
+            if next < l:
+                works = False
+
+            if works:
                 self.put_int(answer)
+            else:
+                self.put_int(-1)
 
 
 def main():
