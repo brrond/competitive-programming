@@ -3,6 +3,8 @@ Link: https://open.kattis.com/problems/terraces
 """
 
 import sys
+from collections import defaultdict
+from collections import deque
 
 sys.setrecursionlimit(20_000)
 
@@ -47,6 +49,34 @@ def get_floats() -> list[float]:
     return list(map(float, get_string().split()))
 
 
+class UnionFind:
+    def __init__(self, n, m):
+        self.parents: dict[tuple[int, int], tuple[int, int]] = {}
+        self.possible: dict[tuple[int, int], bool] = {}
+
+        for i in range(n):
+            for j in range(m):
+                self.parents[(i, j)] = (i, j)
+                self.possible[(i, j)] = True
+
+    def get_parent(self, key: tuple[int, int]) -> tuple[int, int]:
+        curr = key
+        while self.parents[curr] != curr:
+            curr = self.parents[curr]
+        return curr
+
+    def get_possible(self, key: tuple[int, int]) -> bool:
+        parent = self.get_parent(key)
+        return self.possible[parent]
+
+    def set_possible(self, key: tuple[int, int], value: bool) -> None:
+        parent = self.get_parent(key)
+        self.possible[parent] = value
+
+    def update_parent(self, key: tuple[int, int], parent: tuple[int, int]) -> None:
+        self.parents[key] = parent
+
+
 def main() -> None:
     """Solution goes here."""
 
@@ -56,104 +86,41 @@ def main() -> None:
     for _ in range(n):
         grid.append(get_ints())
 
-    # BFS
-    passt = [[None for _ in range(m)] for _ in range(n)]  # (aka suits)
-    processing = [[False for _ in range(m)] for _ in range(n)]
-
-    def is_ok(i: int, j: int) -> bool:
-        # Mem
-        if passt[i][j] is not None:
-            return passt[i][j]
-
-        # Check if any of the neighbors is smaller.
-        current = grid[i][j]
-        if any(
-            [
-                i - 1 >= 0 and grid[i - 1][j] < current,
-                i + 1 < n and grid[i + 1][j] < current,
-                j - 1 >= 0 and grid[i][j - 1] < current,
-                j + 1 < m and grid[i][j + 1] < current,
-            ]
-        ):
-            passt[i][j] = False
-            return False
-
-        # Check if all the neighbors are taller.
-        if all(
-            [
-                i - 1 < 0 or grid[i - 1][j] > current,
-                i + 1 >= n or grid[i + 1][j] > current,
-                j - 1 < 0 or grid[i][j - 1] > current,
-                j + 1 >= m or grid[i][j + 1] > current,
-            ]
-        ):
-            passt[i][j] = True
-            return True
-
-        # Check if all the neighbors are being processed.
-        if all(
-            [
-                i - 1 < 0 or processing[i - 1][j],
-                i + 1 >= n or processing[i + 1][j],
-                j - 1 < 0 or processing[i][j - 1],
-                j + 1 >= m or processing[i][j + 1],
-            ]
-        ):
-            passt[i][j] = True
-            return True
-
-        # :(
-        # BFS over all neighbors with the same height.
-        processing[i][j] = True
-        neighbors = [(i - 1, j), (i + 1, j), (i, j - 1), (i, j + 1)]
-        ok = None
-        # from O(1) up to O(n * m)
-        for neighbor in neighbors:
-            ni, nj = neighbor
-            if n > ni >= 0 and m > nj >= 0:
-                if grid[ni][nj] == current and not processing[ni][nj]:
-                    if ok is None:
-                        ok = is_ok(ni, nj)
-                    else:
-                        ok = ok and is_ok(ni, nj)
-                elif grid[ni][nj] > current:
-                    if ok is None:
-                        ok = True
-                    else:
-                        ok = ok and True
-        processing[i][j] = False
-
-        # O(1)
-        if not ok:
-            for neighbor in neighbors:
-                ni, nj = neighbor
-                if n > ni >= 0 and m > nj >= 0 and grid[ni][nj] == current:
-                    passt[ni][nj] = False
-
-        passt[i][j] = ok
-        return ok
-
-    # O(n * m)
-    # and yeah, is_ok can run up to O(n * m),
-    # but the overall complexity is still O(n * m),
-    # because is_ok will run O(n * m) only once.
-    # So it actually something like T(2 * n * m),
-    # which is ok.
+    # Union Find
+    uf = UnionFind(n, m)
+    RIGHT_DIRECTION = (0, 1)
+    DOWN_DIRECTION = (1, 0)
+    neighbor_directions = [(-1, 0), DOWN_DIRECTION, (0, -1), RIGHT_DIRECTION]
     for i in range(n):
         for j in range(m):
 
-            if passt[i][j] is None:
-                passt[i][j] = is_ok(i, j)
+            key = (i, j)
+            for direction in neighbor_directions:
+                ni = i + direction[0]
+                nj = j + direction[1]
+
+                if n > ni >= 0 and m > nj >= 0:
+
+                    if grid[i][j] > grid[ni][nj]:
+                        uf.set_possible(key, False)
+
+                    if (
+                        direction in (RIGHT_DIRECTION, DOWN_DIRECTION)
+                        and grid[i][j] == grid[ni][nj]
+                    ):
+                        uf.update_parent((ni, nj), key)
 
     if DEBUG:
-        print(*passt, sep="\n")
+        for i in range(n):
+            for j in range(m):
+                print(uf.get_possible((i, j)), end="")
+            print()
 
     ans = 0
     for i in range(n):
         for j in range(m):
-            if passt[i][j]:
+            if uf.get_possible((i, j)):
                 ans += 1
-
     print(ans)
 
 
