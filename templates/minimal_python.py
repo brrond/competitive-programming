@@ -45,7 +45,7 @@ def get_floats() -> list[float]:
     return list(map(float, get_string().split()))
 
 
-def main():
+def main() -> None:
     """Solution goes here."""
 
 
