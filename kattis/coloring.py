@@ -50,27 +50,29 @@ def main() -> None:
 
     n = get_int()
     connections: dict[int, list[int]] = {}
+    can_have_simmilar_color: dict[int, set[int]] = {}
     for i in range(n):
         connections[i] = get_ints()
+        can_have_simmilar_color[i] = set(range(n))
+        can_have_simmilar_color[i].discard(i)
+        for el in connections[i]:
+            can_have_simmilar_color[i].discard(el)
 
-    def backtrack(colors: dict[int, int]) -> int:
-        if len(colors) == n:
-            return max(colors.values())
+    if DEBUG:
+        for key, similar in can_have_simmilar_color.items():
+            print(f"{key}: {similar}")
 
-        possible_colors = set(range(n))
-        i_to_paint = len(colors)
-        for el in connections[i_to_paint]:
-            possible_colors.discard(colors.get(el, -1))
+    not_colored = list(range(n))
+    ans = 0
+    while len(not_colored) != 0:
 
-        best = n
-        for possible_color in possible_colors:
-            colors[i_to_paint] = possible_color
-            best = min(best, backtrack(colors))
-            del colors[i_to_paint]
-
-        return best
-
-    print(backtrack({}) + 1)
+        i = not_colored[0]
+        for el in can_have_simmilar_color[i]:
+            if el in not_colored:
+                not_colored.remove(el)
+        not_colored.remove(i)
+        ans += 1
+    print(ans)
 
 
 if __name__ == "__main__":
