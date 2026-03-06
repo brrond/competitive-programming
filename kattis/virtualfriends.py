@@ -46,14 +46,9 @@ def get_floats() -> list[float]:
 
 
 class UnionFind:
-    def __init__(self, friends: list[str]):
-        n = len(friends)
-        self.n = n
+    def __init__(self):
         self.parents = {}
         self.counts = {}
-        for friend in friends:
-            self.parents[friend] = friend
-            self.counts[friend] = 1
 
     def find(self, f: str) -> str:
         curr = f
@@ -65,6 +60,9 @@ class UnionFind:
     def union(self, f1: str, f2: str) -> None:
         p1 = self.find(f1)
         p2 = self.find(f2)
+
+        if p1 == p2:
+            return
 
         self.parents[p2] = p1
         self.counts[p1] += self.counts[p2]
@@ -80,21 +78,22 @@ def main() -> None:
     for _ in range(t):
 
         f = get_int()
-        people = set()
-        connections: list[tuple[str, str]] = []
+        uf = UnionFind()
+        outs = []
         for _ in range(f):
             name1, name2 = get_string().split()
-            people.add(name1)
-            people.add(name2)
-            connections.append((name1, name2))
 
-        outs = ""
-        uf = UnionFind(list(people))
-        for connection in connections:
-            f1, f2 = connection
-            uf.union(f1, f2)
-            outs += str(uf.find_count(f2)) + "\n"
-        print(outs)
+            if name1 not in uf.parents:
+                uf.parents[name1] = name1
+                uf.counts[name1] = 1
+
+            if name2 not in uf.parents:
+                uf.parents[name2] = name2
+                uf.counts[name2] = 1
+
+            uf.union(name1, name2)
+            outs.append(str(uf.find_count(name2)))
+        print("\n".join(outs))
 
 
 if __name__ == "__main__":
