@@ -1,5 +1,23 @@
 """
-Link:
+Link: https://open.kattis.com/problems/millionairemadness
+
+7 5
+10 11 12 13 14
+11 20 16 17 16
+12 10 18 21 24
+14 10 14 14 22
+16 18 20 20 25
+25 24 22 10 25
+26 27 28 21 25
+
+1 4
+4 3 2 1
+
+3 3
+1 2 3
+6 5 4
+7 8 9
+
 """
 
 import sys
@@ -59,24 +77,17 @@ def main() -> None:
     DOWN = (1, 0)
     UP = (-1, 0)
     LEFT = (0, -1)
-    pq: list[tuple[int, tuple[int, int]]] = []
-    i = j = 0
-    for d in (RIGHT, DOWN):
-        ni = i + d[0]
-        nj = j + d[1]
+    pq: list[tuple[int, tuple[int, int]]] = [(0, (0, 0))]
 
-        if n > ni >= 0 and m > nj >= 0:
-            heapq.heappush(pq, (max(grid[ni][nj] - grid[i][j], 0), (ni, nj)))
-
-    visited = set()
+    visited = [[False for _ in range(m)] for _ in range(n)]
     while len(pq) != 0:
 
         cost, key = heapq.heappop(pq)
         i, j = key
 
-        if key in visited:
+        if visited[i][j]:
             continue
-        visited.add(key)
+        visited[i][j] = True
 
         if key == (n - 1, m - 1):
             print(cost)
@@ -86,7 +97,7 @@ def main() -> None:
             ni = i + d[0]
             nj = j + d[1]
 
-            if n > ni >= 0 and m > nj >= 0:
+            if n > ni >= 0 and m > nj >= 0 and not visited[ni][nj]:
 
                 heapq.heappush(pq, (max(grid[ni][nj] - grid[i][j], 0, cost), (ni, nj)))
 
