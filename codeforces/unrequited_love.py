@@ -105,74 +105,41 @@ class CPSolver:
             n = self.get_int()
             a = self.get_ints()
 
-            # Total love for each triad from each index
-            # are gonna be considered.
-            # O(n)
-            triads = defaultdict(list)
-            for i in range(n):
-                position = i
-
-                next_position = position + 2
-                if next_position < n:
-
-                    next_next_position = next_position + 2
-                    if next_next_position < n:
-
-                        s = a[position] + a[next_position] - a[next_next_position]
-                        triads[s].append(i)
-
-            # print(pairs)
-            # defaultdict(<class 'list'>, {7: [0, 1]})
-            # defaultdict(<class 'list'>, {0: [0, 1, 2]})
-            # defaultdict(<class 'list'>, {0: [0, 1, 2, 7], -6: [3], -5: [4, 6], 2: [5]})
-            # Not all "loves" are possible here.
-
-            # In the second case (0, 1, 2), possible pairs are:
-            # 0 1 and 1 2, but not 0 2
-            # So the answer is 2.
-
-            # In the third case, possible pairs are:
-            # 0 1, 1 2, 2 7, 0 7, 1 7
-            # So the answer is 5.
-
-            # Sums with no pairs are not checked.
-            # Each sum is checked separately and won't overlap with other sums.
-            # Each pair in one sum won't overlap, if:
-            # - diff of indices > 4 OR
-            # - diff of indices % 2 != 0
-            # So each triad of numbers, which give the same sum, must be checked for the total number of pairs.
-            # Naiv algorithm gives something like O(n^3):
-            # for each sum: (1)
-            #     for each element (el1) which gives sum: (2)
-            #         for each next element (el2) which gives sum: (3)
-            #             if index suits el1 el2:
-            #                 ans++
-            # But in reality O(n^3) is not achievable.
-            # If (1) is O(n) then (2) and (3) are O(1) => O(n)
-            # If (2) is O(n) then (3) is also O(n) (but actually optimized, as in bubble sort),
-            # but (1) is O(1) => O(n^2)
-            # From problem statement:
-            # sum of n over all testcases <= 2 * 10^5.
+            # Assumption: Forget about overlapping parts.
+            # The task is then very simple: calculate the maximal possible count of pairs,
+            # where sums of triads are equal.
+            # Basically: find all x, y, where x != y (and y > x, as the order doesn't matter).
+            # Naive approach would be:
+            # 1. Calculate "loves" for each triad.
+            # 2. Iterate all triads.
+            # 3. If triad in set -> ans++
+            # 4. If not -> add it to set
+            #
+            # Overlapping parts are only relevant for +2 and +4 indices (the pair must not be added).
 
             ans = 0
-            for _, pairs in triads.items():
+            sums: list[int] = [0] * n
+            seen_sums: dict[int, int] = defaultdict(int)
+            for i in range(n - 4): # O(n)
+                s = a[i] + a[i + 2] - a[i + 4]
+                to_ans = seen_sums[s] = seen_sums[s] + 1  # O(log n)
+                ans += to_ans - 1
 
-                for i, el1 in enumerate(pairs):
-                    for el2 in pairs[i + 1:]:
-                        diff = el2 - el1
-                        if diff > 4 or diff % 2 != 0:
-                            ans += 1
+                sums[i] = s # O(1)
+
+                if i >= 2 and sums[i - 2] == s:  # O(1)
+                    ans -= 1
+                if i >= 4 and sums[i - 4] == s:  # O(1)
+                    ans -= 1
 
             self.put_int(ans)
-
-
 
 
 
 def main():
     """Main method."""
 
-    CPSolver(True)()
+    CPSolver()()
 
 
 if __name__ == "__main__":
