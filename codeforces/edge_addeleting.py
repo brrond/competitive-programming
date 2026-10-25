@@ -1,20 +1,21 @@
 """
-Link:
+Link: https://codeforces.com/contest/2277/problem/C
+
+Extra tests:
+2
+3 1
+1 3
+2 3
+2
+3 1
+1 3
+2 3
+3
 """
 
-from __future__ import annotations
 import sys
-from collections import deque, defaultdict
-from typing import Callable, Any, Optional
-from dataclasses import dataclass
-
-
-@dataclass
-class Node:
-    id: int
-    parent: Optional[Node]
-    children: list[Node]
-    childer_ids: set[int]
+from collections import deque
+from typing import Callable, Any
 
 
 class CPSolver:
@@ -113,128 +114,87 @@ class CPSolver:
 
             # Read input
             n, m = self.get_ints()
-            nodes: list[Node] = [Node(i, None, [], set()) for i in range(n)]  # O(n)
-            root: Node = nodes[0]
+            connections: list[list[int]] = [[] for _ in range(n)]
             for _ in range(n - 1):  # O(n)
                 x, y = self.get_ints()
 
-                parent = nodes[x - 1]
-                child = nodes[y - 1]
-
-                parent.children.append(child)
-                parent.childer_ids.add(y - 1)
-                child.parent = parent
+                a = x - 1
+                b = y - 1
+                connections[a].append(b)
+                connections[b].append(a)
             operations = self.get_ints()  # O(m)
 
-            # Original calculations.
-            depths: dict[int, int] = self.calculate_depths(root)  # O(n)
-            path: list[Node] = self.calculate_path(nodes)  # O(n)
-            ans = len(path)
+            # Do I have to calculate path in order to determine
+            # if the new order is better than current?
+            # - no
+            # lets say:
+            #
+            # depth(x, y) - length of the path from x to y
+            # d = depth(1, n)
+            # l = depth(1, v), where v is v_i from operation
+            # j = depth(1, w), where w is joint point of path (1, n) and (1, v)
+            #
+            # Let's say, the new path is better. It means:
+            # d_new > d => d_new - d > 0
+            #
+            # d_new = (d - j) + (l - j) + 1 (- d from both parts)
+            # d_new - d = d - j + l - j + 1 - d
+            # d_new - d = - j + l - j + 1 =>
+            # - j + l - j + 1 > 0
+            # l - 2j + 1 > 0 (and l - 2j + 1 gives the increment to the answer)
+            #
+            # Assumptions:
+            # 1. I only look at the subtree from the root in which destination node is located.
+            # 2. There are basically two operations:
+            #    1. Delete newly created edge (aka do nothing)
+            #    2. Delete one of the edges in path (1, w)
+            # 3. Deleted edge (x) from path (1, w) must always be
+            #    the first edge after the root (1, x).
+            #    This way the other edges on path (e, x) can be reused.
 
+            # One important thing (Hint): It suffices to use one operation this way and
+            # delete the newly added edge in all others. Nothing better is possible:
+            # every added edge is incident to 1, so a simple path from 1 to n in the final tree
+            # uses at most one of them, as its first edge, and then follows an original path
+            # from vi to n avoiding 1
+
+            # Determine the depth of the path from each vertex to n.
+            # BFS
+            depths: list[int] = [-1 for _ in range(n)]
+            visited: list[bool] = [False for _ in range(n)]
+            nodes: deque[tuple[int, int]] = deque()
+            nodes.append((0, n - 1))
+            while len(nodes) != 0:
+                depth, node = nodes.popleft()
+                depths[node] = depth
+                visited[node] = True
+
+                # Skip other path over 0.
+                if node == 0:
+                    continue
+
+                for el in connections[node]:
+                    if visited[el]:
+                        continue
+
+                    nodes.append((depth + 1, el))
+
+            ans = depths[0]
             for el in operations:  # O(m)
                 v = el - 1
 
-                if v in root.childer_ids or v == 0 or v == n - 1:  # O(1)
+                if v in [0, n - 1]:
                     continue
 
-                # Do I have to calculate path in order to determine
-                # if the new order is better than current?
-                # - no
-                # lets say:
-                #
-                # depth(x, y) - length of the path from x to y
-                # d = depth(1, n)
-                # l = depth(1, v), where v is v_i from operation
-                # j = depth(1, w), where w is joint point of path (1, n) and (1, v)
-                #
-                # Let's say, the new path is better. It means:
-                # d_new > d => d_new - d > 0
-                #
-                # d_new = (d - j) + (l - j) + 1 (- d from both parts)
-                # d_new - d = d - j + l - j + 1 - d
-                # d_new - d = - j + l - j + 1 =>
-                # - j + l - j + 1 > 0
-                # l - 2j + 1 > 0 (and l - 2j + 1 gives the increment to the answer)
-                #
-                # Assumptions:
-                # 1. I only look at the subtree from the root in which destination node is located.
-                # 2. There are basically two operations:
-                #    1. Delete newly created edge (aka do nothing)
-                #    2. Delete one of the edges in path (1, w)
-                # 3. Deleted edge (x) from path (1, w) must always be
-                #    the first edge after the root (1, x).
-                #    This way the other edges on path (e, x) can be reused.
-
-                # Determine junction point (w) and j (depth(w))
-                w = self.calculate_junction_point(nodes[v], [node.id for node in path])
-                if w.id == root.id:
-                    continue
-                j = depths[w.id]
-
-                # Determine l
-                l = depths[v]
-
-                # New path is batter than old
-                gain = l - 2 * j + 1
-                if gain > 0:
-                    ans += gain
+                ans = max(ans, depths[v] + 1)
 
             self.put_int(ans)
-
-    def calculate_depths(self, root: Node) -> dict[int, int]:
-        """
-        Calculates depths for all nodes in the list.
-        Returns a dict, where:
-        keys - ids of nodes
-        values - depths of nodes
-
-        Complexity: O(n).
-        """
-
-        depths: dict[int, int] = defaultdict(int)  # depth[x] = y => depth(1, x) = y
-        nodes2try: list[Node] = [root]
-        while len(nodes2try) != 0:
-
-            curr = nodes2try.pop(0)
-            for child in curr.children:
-                nodes2try.append(child)
-
-            if curr.parent is not None:
-                depths[curr.id] = depths[curr.parent.id] + 1
-        return depths
-
-    def calculate_path(self, nodes: list[Node]) -> list[Node]:
-        """
-        Calculates the path from n up to 0.
-
-        Complexity: O(n).
-        """
-
-        path: deque[Node] = deque()
-        curr: Optional[Node] = nodes[-1]
-        while curr is not None:
-            path.appendleft(curr)
-            curr = curr.parent
-        return path
-
-    def calculate_junction_point(self, curr: Node, path_ids: list[int]) -> Node:
-        """
-        Determines junction point from curr to path given by path_ids.
-
-        Complexity: O(n).
-        """
-
-        while curr.parent is not None:
-            if curr.id in path_ids:
-                break
-            curr = curr.parent
-        return curr
 
 
 def main():
     """Main method."""
 
-    CPSolver(True)()
+    CPSolver()()
 
 
 if __name__ == "__main__":
