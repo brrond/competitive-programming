@@ -2,9 +2,19 @@
 Link:
 """
 
+from __future__ import annotations
 import sys
-from copy import deepcopy
-from typing import Callable, Any
+from collections import deque, defaultdict
+from typing import Callable, Any, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class Node:
+    id: int
+    parent: Optional[Node]
+    children: list[Node]
+    childer_ids: set[int]
 
 
 class CPSolver:
@@ -97,81 +107,134 @@ class CPSolver:
     def solve(self) -> None:
         """Solution goes here."""
 
-        MAX = 10**6
-
         t = self.get_int()
         while t != 0:
             t -= 1
 
             # Read input
             n, m = self.get_ints()
-            nodes: list[list[int]] = [[] for _ in range(n)]  # O(n)
+            nodes: list[Node] = [Node(i, None, [], set()) for i in range(n)]  # O(n)
+            root: Node = nodes[0]
             for _ in range(n - 1):  # O(n)
                 x, y = self.get_ints()
-                nodes[x - 1].append(y - 1)
-            operations = self.get_ints()
 
-            # Print initial paths
-            path = self.find_path(nodes, 0, n - 1)
+                parent = nodes[x - 1]
+                child = nodes[y - 1]
 
-            if self.debug:
-                print("Original:", path)
+                parent.children.append(child)
+                parent.childer_ids.add(y - 1)
+                child.parent = parent
+            operations = self.get_ints()  # O(m)
 
-            # Check if "greedy" approach helps.
-            # To check, if selecting the best solution for each operation,
-            # helps improve the final score, I will simply try it.
-            # Brute force for now.
+            # Original calculations.
+            depths: dict[int, int] = self.calculate_depths(root)  # O(n)
+            path: list[Node] = self.calculate_path(nodes)  # O(n)
+            ans = len(path)
+
             for el in operations:  # O(m)
                 v = el - 1
 
-                if v in nodes[0]:
+                if v in root.childer_ids or v == 0 or v == n - 1:  # O(1)
                     continue
 
-                prev_nodes = deepcopy(nodes)  # O(n ^ 2)
-                subpath = self.find_path(nodes, 0, v)
-                if self.debug:
-                    print(subpath)
+                # Do I have to calculate path in order to determine
+                # if the new order is better than current?
+                # - no
+                # lets say:
+                #
+                # depth(x, y) - length of the path from x to y
+                # d = depth(1, n)
+                # l = depth(1, v), where v is v_i from operation
+                # j = depth(1, w), where w is joint point of path (1, n) and (1, v)
+                #
+                # Let's say, the new path is better. It means:
+                # d_new > d => d_new - d > 0
+                #
+                # d_new = (d - j) + (l - j) + 1 (- d from both parts)
+                # d_new - d = d - j + l - j + 1 - d
+                # d_new - d = - j + l - j + 1 =>
+                # - j + l - j + 1 > 0
+                # l - 2j + 1 > 0 (and l - 2j + 1 gives the increment to the answer)
+                #
+                # Assumptions:
+                # 1. I only look at the subtree from the root in which destination node is located.
+                # 2. There are basically two operations:
+                #    1. Delete newly created edge (aka do nothing)
+                #    2. Delete one of the edges in path (1, w)
+                # 3. Deleted edge (x) from path (1, w) must always be
+                #    the first edge after the root (1, x).
+                #    This way the other edges on path (e, x) can be reused.
 
-                nodes[0].remove(subpath[1])
-                nodes[0].append(v)
-                prev = subpath[1]
-                for i in range(2, len(subpath)):  # O(n)
-                    curr = subpath[i]
-                    nodes[prev].remove(curr)
-                    nodes[curr].append(prev)
-                    prev = curr
+                # Determine junction point (w) and j (depth(w))
+                w = self.calculate_junction_point(nodes[v], [node.id for node in path])
+                if w.id == root.id:
+                    continue
+                j = depths[w.id]
 
-                new_path = self.find_path(nodes, 0, n - 1)
-                if len(new_path) > len(path):
-                    path = new_path
-                else:  # new_path < path:
-                    nodes = prev_nodes
+                # Determine l
+                l = depths[v]
 
-            if self.debug:
-                print("End:", path)
-            self.put_int(len(path) - 1)
+                # New path is batter than old
+                gain = l - 2 * j + 1
+                if gain > 0:
+                    ans += gain
 
-    def find_path(self, nodes: list[list[int]], f: int, t: int) -> list[int]:
+            self.put_int(ans)
+
+    def calculate_depths(self, root: Node) -> dict[int, int]:
         """
-        DFS for path between nodes from f to t.
-        O(n).
+        Calculates depths for all nodes in the list.
+        Returns a dict, where:
+        keys - ids of nodes
+        values - depths of nodes
+
+        Complexity: O(n).
         """
 
-        if f == t:
-            return [t]
+        depths: dict[int, int] = defaultdict(int)  # depth[x] = y => depth(1, x) = y
+        nodes2try: list[Node] = [root]
+        while len(nodes2try) != 0:
 
-        for node in nodes[f]:
-            path = self.find_path(nodes, node, t)
-            if len(path) != 0:
-                return [f] + path
+            curr = nodes2try.pop(0)
+            for child in curr.children:
+                nodes2try.append(child)
 
-        return []
+            if curr.parent is not None:
+                depths[curr.id] = depths[curr.parent.id] + 1
+        return depths
+
+    def calculate_path(self, nodes: list[Node]) -> list[Node]:
+        """
+        Calculates the path from n up to 0.
+
+        Complexity: O(n).
+        """
+
+        path: deque[Node] = deque()
+        curr: Optional[Node] = nodes[-1]
+        while curr is not None:
+            path.appendleft(curr)
+            curr = curr.parent
+        return path
+
+    def calculate_junction_point(self, curr: Node, path_ids: list[int]) -> Node:
+        """
+        Determines junction point from curr to path given by path_ids.
+
+        Complexity: O(n).
+        """
+
+        while curr.parent is not None:
+            if curr.id in path_ids:
+                break
+            curr = curr.parent
+        return curr
 
 
 def main():
     """Main method."""
 
-    CPSolver()()
+    CPSolver(True)()
 
 
 if __name__ == "__main__":
